@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Crowd Detection and Monitoring System</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a'
+            },
+            surface: {
+              dark: '#0f172a',
+              card: '#1e293b',
+              border: '#334155'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo & System Identity -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-blue-400/30">
+          <i data-lucide="scan" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base font-bold tracking-tight text-white">Smart Crowd Detection</h1>
+            <span class="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">AI Ops v1.0</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Public Safety & Real-Time Crowd Density Monitoring</p>
+        </div>
+      </div>
+
+      <!-- System Status Badges & Controls -->
+      <div class="flex items-center space-x-2 sm:space-x-4">
+        <!-- Privacy Badge -->
+        <div class="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium" title="Privacy-preserving architecture: Zero facial recognition, no biometric storage.">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+          <span>Privacy Guaranteed</span>
+        </div>
+
+        <!-- AI Engine Status -->
+        <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300 text-xs font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="hidden sm:inline">YOLOv8 Engine</span>
+          <span class="sm:hidden">AI Online</span>
+        </div>
+
+        <!-- Sound Alert Toggle Button -->
+        <button id="toggle-sound-btn" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-all text-xs flex items-center space-x-1.5" title="Toggle audio sirens & warning cues">
+          <i data-lucide="volume-2" class="w-4 h-4 text-emerald-400" id="sound-icon"></i>
+          <span class="hidden lg:inline text-xs">Audio Alerts: <strong class="text-emerald-400" id="sound-status-text">ON</strong></span>
+        </button>
+
+        <!-- Project Info Modal Trigger -->
+        <button id="info-modal-btn" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-all" title="System Architecture & College Project Overview">
+          <i data-lucide="info" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Emergency Warning Alert Banner (Appears dynamically for High/Critical) -->
+  <div id="alert-banner" class="hidden transition-all duration-300 border-b">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div id="alert-banner-icon" class="p-2 rounded-lg">
+          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 id="alert-banner-title" class="font-bold text-sm tracking-wide">HIGH CROWD DENSITY DETECTED</h2>
+          <p id="alert-banner-desc" class="text-xs opacity-90">Attention required. Potential bottleneck forming in monitored area.</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="alert-action-btn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/20 hover:bg-white/30 backdrop-blur transition-all flex items-center space-x-1">
+          <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i>
+          <span>View SOPs</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Dashboard Content -->
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- KPI Summary Cards Grid -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Card 1: Crowd Count -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm hover:border-slate-700 transition">
+        <div class="flex items-center justify-between text-slate-400 mb-2">
+          <span class="text-xs font-medium uppercase tracking-wider">Crowd Count</span>
+          <div class="p-2 bg-blue-500/10 rounded-xl text-blue-400">
+            <i data-lucide="users" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="flex items-baseline space-x-2">
+          <span id="kpi-count" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">0</span>
+          <span class="text-xs text-slate-400">people</span>
+        </div>
+        <p id="kpi-count-sub" class="text-[11px] text-slate-400 mt-2 flex items-center space-x-1">
+          <i data-lucide="activity" class="w-3 h-3 text-blue-400"></i>
+          <span>Awaiting input stream</span>
+        </p>
+      </div>
+
+      <!-- Card 2: Crowd Density Classification -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm hover:border-slate-700 transition">
+        <div class="flex items-center justify-between text-slate-400 mb-2">
+          <span class="text-xs font-medium uppercase tracking-wider">Density Level</span>
+          <div id="kpi-density-icon-wrap" class="p-2 bg-emerald-500/10 rounded-xl text-emerald-400">
+            <i data-lucide="gauge" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span id="kpi-density-badge" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            Normal / Low
+          </span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
+          <div id="kpi-occupancy-bar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 15%"></div>
+        </div>
+      </div>
+
+      <!-- Card 3: Location / Event Context -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm hover:border-slate-700 transition">
+        <div class="flex items-center justify-between text-slate-400 mb-2">
+          <span class="text-xs font-medium uppercase tracking-wider">Event Scenario</span>
+          <div class="p-2 bg-indigo-500/10 rounded-xl text-indigo-400">
+            <i data-lucide="map-pin" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="truncate">
+          <span id="kpi-event-name" class="text-sm sm:text-base font-bold text-white block truncate">Temple Event</span>
+          <span id="kpi-event-type" class="text-[11px] text-slate-400 block truncate">Religious Gathering</span>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-2 flex items-center space-x-1 truncate">
+          <i data-lucide="sliders" class="w-3 h-3 text-indigo-400"></i>
+          <span id="kpi-threshold-text">Cap: 60 Persons</span>
+        </p>
+      </div>
+
+      <!-- Card 4: Early Warning Status -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm hover:border-slate-700 transition">
+        <div class="flex items-center justify-between text-slate-400 mb-2">
+          <span class="text-xs font-medium uppercase tracking-wider">Warning Status</span>
+          <div id="kpi-status-icon-wrap" class="p-2 bg-emerald-500/10 rounded-xl text-emerald-400">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div>
+          <span id="kpi-status-text" class="text-sm sm:text-base font-bold text-emerald-400 block truncate">Normal Crowd</span>
+          <p id="kpi-status-urgency" class="text-[11px] text-slate-400 mt-1 truncate">Safe Movement Zone</p>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-2 flex items-center space-x-1">
+          <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i>
+          <span id="kpi-latency">Latency: -- ms</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- Operational Control & Monitoring Deck -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Left Column: Input Deck & Gathering Selector (4 Cols) -->
+      <div class="lg:col-span-4 space-y-6">
+
+        <!-- Input Source Tabs & Setup Card -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-semibold text-white flex items-center space-x-2">
+              <i data-lucide="video" class="w-4 h-4 text-blue-400"></i>
+              <span>Detection Source</span>
+            </h2>
+            <span class="text-[11px] text-slate-400">Select Mode</span>
+          </div>
+
+          <!-- Source Type Buttons -->
+          <div class="grid grid-cols-4 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
+            <button id="tab-image" class="tab-btn active px-2 py-2 text-xs font-medium rounded-lg text-slate-300 hover:text-white transition flex flex-col items-center gap-1">
+              <i data-lucide="image" class="w-4 h-4"></i>
+              <span>Image</span>
+            </button>
+            <button id="tab-webcam" class="tab-btn px-2 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex flex-col items-center gap-1">
+              <i data-lucide="camera" class="w-4 h-4"></i>
+              <span>Live Cam</span>
+            </button>
+            <button id="tab-video" class="tab-btn px-2 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex flex-col items-center gap-1">
+              <i data-lucide="film" class="w-4 h-4"></i>
+              <span>Video</span>
+            </button>
+            <button id="tab-presets" class="tab-btn px-2 py-2 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex flex-col items-center gap-1">
+              <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+              <span>Presets</span>
+            </button>
+          </div>
+
+          <!-- Event Type Selector -->
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+              <span>Event / Location Type:</span>
+              <span class="text-[10px] text-blue-400 font-normal">Sets density thresholds</span>
+            </label>
+            <select id="event-type-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+              <option value="temple" selected>Temple Gathering & Religious Event</option>
+              <option value="political">Political Party Meeting & Public Rally</option>
+              <option value="festival">Festival & Cultural Event</option>
+              <option value="celebration">Public Celebration & City Plaza</option>
+              <option value="meeting">Large Meeting & Indoor Function</option>
+              <option value="other">Other Public Gathering</option>
+            </select>
+            <p id="event-desc-hint" class="text-[11px] text-slate-400 italic">
+              Inner sanctums, darshan queues, choke points, and narrow corridors.
+            </p>
+          </div>
+
+          <!-- Mode 1: Image Upload View -->
+          <div id="mode-image-container" class="space-y-4">
+            <div id="dropzone" class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-6 text-center transition cursor-pointer bg-slate-950/60 group">
+              <input type="file" id="image-file-input" accept="image/*" class="hidden">
+              <div class="w-12 h-12 mx-auto rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:scale-110 transition duration-300 mb-3">
+                <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+              </div>
+              <p class="text-xs font-medium text-slate-200">Click to upload or drag & drop</p>
+              <p class="text-[10px] text-slate-400 mt-1">PNG, JPG, JPEG, WEBP up to 20MB</p>
+            </div>
+            <button id="analyze-image-btn" disabled class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 font-medium text-xs text-white shadow-lg shadow-blue-500/20 transition flex items-center justify-center space-x-2">
+              <i data-lucide="scan-line" class="w-4 h-4"></i>
+              <span>Analyze Crowd Image</span>
+            </button>
+          </div>
+
+          <!-- Mode 2: Live Webcam View -->
+          <div id="mode-webcam-container" class="hidden space-y-4">
+            <div class="bg-slate-950 rounded-2xl p-4 border border-slate-800 text-center space-y-3">
+              <div class="w-12 h-12 mx-auto rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                <i data-lucide="video" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-white">Live Camera Monitoring Feed</p>
+                <p class="text-[10px] text-slate-400 mt-1">Direct real-time frame analysis from camera</p>
+              </div>
+              <div class="flex gap-2">
+                <button id="start-cam-btn" class="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-medium text-xs text-white transition flex items-center justify-center space-x-1.5 shadow-md shadow-emerald-600/20">
+                  <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                  <span>Start Camera</span>
+                </button>
+                <button id="stop-cam-btn" disabled class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 font-medium text-xs text-slate-300 transition flex items-center justify-center space-x-1.5">
+                  <i data-lucide="square" class="w-3.5 h-3.5"></i>
+                  <span>Stop</span>
+                </button>
+              </div>
+            </div>
+            <div id="cam-stats-bar" class="hidden text-[11px] text-slate-400 flex items-center justify-between px-2">
+              <span id="cam-fps-badge">FPS: 0.0</span>
+              <span class="text-emerald-400 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Streaming
+              </span>
+            </div>
+          </div>
+
+          <!-- Mode 3: Video File Upload View -->
+          <div id="mode-video-container" class="hidden space-y-4">
+            <div id="video-dropzone" class="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-2xl p-6 text-center transition cursor-pointer bg-slate-950/60 group">
+              <input type="file" id="video-file-input" accept="video/mp4,video/avi,video/mov,video/mkv" class="hidden">
+              <div class="w-12 h-12 mx-auto rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition duration-300 mb-3">
+                <i data-lucide="film" class="w-6 h-6"></i>
+              </div>
+              <p class="text-xs font-medium text-slate-200">Upload Crowd Video (.mp4, .mov)</p>
+              <p class="text-[10px] text-slate-400 mt-1">Samples frames & plots crowd trajectory chart</p>
+            </div>
+            <button id="analyze-video-btn" disabled class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 font-medium text-xs text-white shadow-lg shadow-indigo-500/20 transition flex items-center justify-center space-x-2">
+              <i data-lucide="play-circle" class="w-4 h-4"></i>
+              <span>Process Video Stream</span>
+            </button>
+            <div id="video-progress-wrap" class="hidden space-y-1.5">
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>Processing frames...</span>
+                <span id="video-progress-text">Please wait</span>
+              </div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div class="bg-indigo-500 h-1.5 rounded-full animate-pulse w-full"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mode 4: 1-Click Demo Presets View -->
+          <div id="mode-presets-container" class="hidden space-y-3">
+            <p class="text-xs text-slate-300 font-semibold">1-Click College Demo Scenarios:</p>
+            <div class="space-y-2" id="preset-list">
+              <!-- Preset 1: Temple -->
+              <button class="preset-btn w-full p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-blue-500 text-left transition flex items-center justify-between group" data-sample="temple-gathering" data-type="temple">
+                <div class="space-y-0.5">
+                  <div class="text-xs font-semibold text-white group-hover:text-blue-400 transition flex items-center gap-1.5">
+                    <span>Temple Queue & Sanctum</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20">High Density</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400">Pilgrims approaching inner choke corridor</p>
+                </div>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-blue-400"></i>
+              </button>
+              <!-- Preset 2: Political Rally -->
+              <button class="preset-btn w-full p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-red-500 text-left transition flex items-center justify-between group" data-sample="political-rally" data-type="political">
+                <div class="space-y-0.5">
+                  <div class="text-xs font-semibold text-white group-hover:text-red-400 transition flex items-center gap-1.5">
+                    <span>Political Rally Podium</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] bg-red-500/10 text-red-400 border border-red-500/20">Critical Density</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400">Massive public assembly front surge</p>
+                </div>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-red-400"></i>
+              </button>
+              <!-- Preset 3: Festival -->
+              <button class="preset-btn w-full p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500 text-left transition flex items-center justify-between group" data-sample="cultural-festival" data-type="festival">
+                <div class="space-y-0.5">
+                  <div class="text-xs font-semibold text-white group-hover:text-amber-400 transition flex items-center gap-1.5">
+                    <span>Cultural Street Festival</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20">Increasing</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400">Procession route crowd gathering</p>
+                </div>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-amber-400"></i>
+              </button>
+              <!-- Preset 4: Celebration -->
+              <button class="preset-btn w-full p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-emerald-500 text-left transition flex items-center justify-between group" data-sample="public-celebration" data-type="celebration">
+                <div class="space-y-0.5">
+                  <div class="text-xs font-semibold text-white group-hover:text-emerald-400 transition flex items-center gap-1.5">
+                    <span>Public City Celebration</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Normal Flow</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400">Outdoor celebration open space</p>
+                </div>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-emerald-400"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Advanced Tuning Accordion -->
+          <details class="text-xs border-t border-slate-800 pt-3 group">
+            <summary class="cursor-pointer text-slate-400 hover:text-slate-200 font-medium flex items-center justify-between list-none">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                <span>Detection & Privacy Settings</span>
+              </span>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 group-open:rotate-180 transition"></i>
+            </summary>
+            <div class="mt-3 space-y-3 pl-1">
+              <!-- Privacy Blur Toggle -->
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="font-medium text-slate-300 block">Privacy Anonymization</span>
+                  <span class="text-[10px] text-slate-400">Gaussian blur on detected heads</span>
+                </div>
+                <input type="checkbox" id="privacy-toggle" checked class="w-4 h-4 rounded text-blue-600 bg-slate-900 border-slate-700 focus:ring-blue-500">
+              </div>
+
+              <!-- Confidence Slider -->
+              <div>
+                <div class="flex justify-between text-[11px] mb-1 text-slate-300">
+                  <span>Confidence Threshold</span>
+                  <span id="conf-val" class="font-bold text-blue-400">20%</span>
+                </div>
+                <input type="range" id="conf-slider" min="10" max="80" value="20" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+              </div>
+            </div>
+          </details>
+
+        </div>
+
+        <!-- SOP Safety Protocols Card (Actionable Guidance for Authorities) -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="clipboard-check" class="w-4 h-4 text-emerald-400"></i>
+              <span>Safety Protocol Guidance (SOPs)</span>
+            </h2>
+            <span id="sop-urgency-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Low Risk
+            </span>
+          </div>
+          <p id="sop-summary" class="text-xs text-slate-300 leading-relaxed">
+            Crowd density is within safe operational limits. Movement is unhindered.
+          </p>
+          <ul id="sop-list" class="space-y-2 text-xs text-slate-400 border-t border-slate-800 pt-3">
+            <li class="flex items-start gap-2">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0"></i>
+              <span>Maintain standard entrance flow and routine volunteer patrols.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0"></i>
+              <span>Keep automated crowd monitoring sensors online.</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Visual Monitor & Charts Deck (8 Cols) -->
+      <div class="lg:col-span-8 space-y-6">
+
+        <!-- Visual Detection Viewport Card -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+          <!-- Viewport Header & View Switchers -->
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              <h2 class="text-sm font-semibold text-white tracking-wide">AI Vision Monitor</h2>
+              <span id="viewport-count-badge" class="px-2 py-0.5 text-xs font-bold rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                0 Persons Detected
+              </span>
+            </div>
+
+            <!-- Visual Toggle Options -->
+            <div class="flex items-center space-x-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+              <button id="view-annotated-btn" class="view-toggle-btn active px-3 py-1 rounded-lg text-slate-200 hover:text-white font-medium transition flex items-center gap-1.5">
+                <i data-lucide="box" class="w-3.5 h-3.5"></i>
+                <span>Bounding Boxes</span>
+              </button>
+              <button id="view-heatmap-btn" class="view-toggle-btn px-3 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition flex items-center gap-1.5">
+                <i data-lucide="flame" class="w-3.5 h-3.5 text-orange-400"></i>
+                <span>Density Heatmap</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Viewport Canvas / Image Display Frame -->
+          <div class="relative w-full aspect-video sm:aspect-[16/10] bg-slate-950 rounded-xl overflow-hidden border border-slate-800/80 flex items-center justify-center group" id="viewport-container">
+            <!-- Grid Lines Overlay for Tactical Look -->
+            <div class="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+
+            <!-- Placeholder State -->
+            <div id="viewport-placeholder" class="text-center p-6 space-y-3 z-10">
+              <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 shadow-inner">
+                <i data-lucide="scan" class="w-8 h-8 animate-pulse text-blue-500/80"></i>
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-slate-300">Live Vision Feed Idle</p>
+                <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Upload an image/video, select a demo preset on the left, or launch the camera to start real-time detection.</p>
+              </div>
+            </div>
+
+            <!-- Result Render (Image Mode) -->
+            <img id="annotated-result-img" class="hidden w-full h-full object-contain select-none z-10" alt="Annotated Detection Result">
+            <img id="heatmap-result-img" class="hidden w-full h-full object-contain select-none z-10" alt="Density Heatmap Result">
+
+            <!-- Webcam Elements (Webcam Mode) -->
+            <video id="webcam-video" autoplay playsinline muted class="hidden absolute inset-0 w-full h-full object-contain z-10"></video>
+            <canvas id="webcam-overlay-canvas" class="hidden absolute inset-0 w-full h-full object-contain z-20 pointer-events-none"></canvas>
+
+            <!-- Loading Spinner Overlay -->
+            <div id="viewport-loader" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center space-y-3">
+              <div class="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+              <p id="loader-msg" class="text-xs font-semibold text-slate-300">Running AI Inference...</p>
+            </div>
+
+            <!-- Viewport HUD Corner Badges -->
+            <div class="absolute top-3 left-3 z-20 flex items-center space-x-2 pointer-events-none">
+              <span id="hud-status" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-900/90 text-emerald-400 border border-slate-700 backdrop-blur">
+                AI ACTIVE
+              </span>
+              <span id="hud-res" class="px-2 py-0.5 rounded text-[10px] font-mono text-slate-400 bg-slate-900/90 border border-slate-800 backdrop-blur">
+                1024x768
+              </span>
+            </div>
+            <div class="absolute bottom-3 right-3 z-20 pointer-events-none">
+              <span id="hud-density" class="px-2.5 py-1 rounded text-xs font-bold bg-slate-900/90 text-slate-300 border border-slate-700 backdrop-blur">
+                LOW DENSITY
+              </span>
+            </div>
+          </div>
+
+          <!-- Bottom Viewport Info Bar -->
+          <div class="flex flex-wrap items-center justify-between text-xs text-slate-400 pt-1 px-1">
+            <div class="flex items-center space-x-4">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="cpu" class="w-3.5 h-3.5 text-blue-400"></i>
+                <span id="inference-time-label">Inference: 0 ms</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="shield" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>Zero Facial Recognition</span>
+              </span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button id="download-result-btn" disabled class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs flex items-center gap-1">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Save Frame</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Crowd Analytics Charts Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Time-Series Crowd Trajectory Chart -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="trending-up" class="w-4 h-4 text-blue-400"></i>
+                <span>Crowd Dynamics Over Time</span>
+              </h2>
+              <span class="text-[10px] text-slate-500 font-mono">Real-Time Influx</span>
+            </div>
+            <div class="h-48 w-full relative">
+              <canvas id="crowdTrendChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Density Breakdown / Safety Zones -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-400"></i>
+                <span>Density Level Distribution</span>
+              </h2>
+              <span class="text-[10px] text-slate-500 font-mono">All Scans</span>
+            </div>
+            <div class="h-48 w-full relative flex items-center justify-center">
+              <canvas id="densityDonutChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Detection History & Audit Table Section -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="history" class="w-5 h-5 text-blue-400"></i>
+          <div>
+            <h2 class="text-sm font-semibold text-white">Detection Audit Log & History</h2>
+            <p class="text-xs text-slate-400">Automated event registry with timestamps and safety alert status</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <!-- Filter by Event -->
+          <select id="history-filter-select" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none">
+            <option value="all">All Events</option>
+            <option value="temple">Temple Gatherings</option>
+            <option value="political">Political Rallies</option>
+            <option value="festival">Festivals</option>
+            <option value="celebration">Celebrations</option>
+          </select>
+          <!-- Export CSV -->
+          <button id="export-history-btn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs flex items-center gap-1.5 border border-slate-700">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Export CSV</span>
+          </button>
+          <!-- Clear History -->
+          <button id="clear-history-btn" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition border border-slate-700" title="Clear History">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- History Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800 bg-slate-950/40">
+            <tr>
+              <th class="py-2.5 px-3">#</th>
+              <th class="py-2.5 px-3">Timestamp</th>
+              <th class="py-2.5 px-3">Source</th>
+              <th class="py-2.5 px-3">Event Scenario</th>
+              <th class="py-2.5 px-3">People Count</th>
+              <th class="py-2.5 px-3">Density Level</th>
+              <th class="py-2.5 px-3">Alert Status</th>
+              <th class="py-2.5 px-3 text-right">Inference</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+            <!-- Dynamic rows populated by JavaScript -->
+            <tr>
+              <td colspan="8" class="text-center py-6 text-slate-500">
+                No detections recorded yet. Perform an analysis above to populate audit logs.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-900/50 py-4 mt-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+      <p>Smart Crowd Detection and Monitoring System &bull; College Capstone & Public Safety Engineering</p>
+      <p class="flex items-center space-x-1">
+        <span>Powered by FastAPI, PyTorch & YOLOv8</span>
+        <span class="mx-1">&bull;</span>
+        <span class="text-emerald-400 flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3"></i> Privacy Compliant</span>
+      </p>
+    </div>
+  </footer>
+
+  <!-- Project Info / Viva Q&A Modal -->
+  <div id="info-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+            <i data-lucide="book-open" class="w-5 h-5"></i>
+          </div>
+          <h2 class="text-base font-bold text-white">System Architecture & Project Details</h2>
+        </div>
+        <button id="close-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs text-slate-300 leading-relaxed">
+        <div>
+          <h3 class="font-bold text-white text-sm mb-1">Project Objective</h3>
+          <p class="text-slate-400">
+            Automate crowd monitoring and early warning estimation for high-gathering venues (political meetings, temple gatherings, festivals, cultural celebrations) to prevent overcrowding bottlenecks and stampede risks.
+          </p>
+        </div>
+
+        <div>
+          <h3 class="font-bold text-white text-sm mb-1">Four Density Classification Zones</h3>
+          <div class="grid grid-cols-2 gap-2 mt-2">
+            <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+              <strong class="block text-emerald-400">Low Density</strong> Normal Crowd, free movement.
+            </div>
+            <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300">
+              <strong class="block text-amber-400">Medium Density</strong> Crowd Increasing, advisory caution.
+            </div>
+            <div class="p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-300">
+              <strong class="block text-orange-400">High Density</strong> Attention Required, bottleneck risks.
+            </div>
+            <div class="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300">
+              <strong class="block text-red-400">Critical Density</strong> Immediate Attention Required, danger of crush.
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="font-bold text-white text-sm mb-1">Privacy & Safety By Design</h3>
+          <p class="text-slate-400">
+            Strictly detects human presence without facial recognition, identity tracing, or biometric storage. Includes an automated face/head Gaussian blur anonymizer to ensure complete GDPR/privacy compliance.
+          </p>
+        </div>
+
+        <div>
+          <h3 class="font-bold text-white text-sm mb-1">Tech Stack</h3>
+          <ul class="list-disc list-inside space-y-1 text-slate-400">
+            <li><strong>AI Core:</strong> Ultralytics YOLOv8 (Class 0: Person) with OpenCV fallback</li>
+            <li><strong>Backend:</strong> Python FastAPI + Uvicorn + SQLite DB</li>
+            <li><strong>Visual Analytics:</strong> Gaussian Heatmap Accumulator & Chart.js Time-Series</li>
+            <li><strong>Frontend:</strong> Modern Responsive Tailwind CSS + Web Audio API Synthesis</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-800 pt-3 flex justify-end">
+        <button id="close-modal-bottom-btn" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 font-semibold text-xs text-white">
+          Understood & Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application JavaScript -->
+  <script src="/js/app.js"></script>
+</body>
+</html>
